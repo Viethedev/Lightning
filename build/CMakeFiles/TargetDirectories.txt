@@ -1,0 +1,4 @@
+C:/Users/ADMIN/Lightning/build/CMakeFiles/lightning.dir
+C:/Users/ADMIN/Lightning/build/CMakeFiles/test.dir
+C:/Users/ADMIN/Lightning/build/CMakeFiles/edit_cache.dir
+C:/Users/ADMIN/Lightning/build/CMakeFiles/rebuild_cache.dir

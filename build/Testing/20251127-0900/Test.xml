@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20251127-0900-Experimental"
+	Name="(empty)"
+	Generator="ctest-4.1.2"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Windows"
+	Hostname="LAPTOP-INIA3DLG"
+	OSRelease=" Personal"
+	OSVersion=" (Build 26100)"
+	OSPlatform="AMD64"
+	Is64Bits="1"
+	VendorString=""
+	VendorID="Unknown Manufacturer"
+	FamilyID="0"
+	ModelID="0"
+	ModelName=""
+	ProcessorCacheSize="0"
+	NumberOfLogicalCPU="16"
+	NumberOfPhysicalCPU="8"
+	TotalVirtualMemory="15149"
+	TotalPhysicalMemory="14173"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="2000"
+	>
+	<Testing>
+		<StartDateTime>Dec 13 13:33 SE Asia Standard Time</StartDateTime>
+		<StartTestTime>1765607620</StartTestTime>
+		<TestList/>
+		<EndDateTime>Dec 13 13:33 SE Asia Standard Time</EndDateTime>
+		<EndTestTime>1765607620</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

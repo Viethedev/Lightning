@@ -1,0 +1,89 @@
+Start testing: Nov 30 08:07 SE Asia Standard Time
+----------------------------------------------------------
+1/1 Testing: LexerSample
+1/1 Test: LexerSample
+Command: "C:/msys64/ucrt64/bin/cmake.exe" "-E" "env" "PATH=C:/msys64/ucrt64/bin;C:\msys64\ucrt64\bin;C:\msys64\ucrt64\bin;C:\msys64\ucrt64\bin;C:\msys64\usr\bin;C:/Program Files (x86)/Common Files/Oracle/Java/java8path;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:/Windows/system32;C:\Windows;C:/Windows/System32/Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:/Windows/System32/OpenSSH/;C:\Program Files\Git\cmd;C:/Users/ADMIN/AppData/Local/Programs/Python/Python314/Scripts/;C:\Users\ADMIN\AppData\Local\Programs\Python\Python314\;C:/Users/ADMIN/AppData/Local/Microsoft/WindowsApps;C:\Users\ADMIN\AppData\Local\Programs\Microsoft VS Code\bin" "lightning"
+Directory: C:/Users/ADMIN/Lightning/build
+"LexerSample" start time: Nov 30 08:07 SE Asia Standard Time
+Output:
+----------------------------------------------------------
+Parse succeeded:
+anon: 'function add(a, b) { return a + b; }'
+  anon: 'function '
+    anon: ''
+    anon: 'function'
+    anon: ' '
+      anon: ' '
+  Ident: 'add'
+    anon: 'add'
+      anon: 'a'
+      anon: 'dd'
+        anon: 'd'
+        anon: 'd'
+  anon: '('
+    anon: ''
+    anon: '('
+    anon: ''
+  Ident: 'a'
+    anon: 'a'
+      anon: 'a'
+      anon: ''
+  anon: ', b'
+    anon: ', b'
+      anon: ', '
+        anon: ''
+        anon: ','
+        anon: ' '
+          anon: ' '
+      Ident: 'b'
+        anon: 'b'
+          anon: 'b'
+          anon: ''
+  anon: ') '
+    anon: ''
+    anon: ')'
+    anon: ' '
+      anon: ' '
+  anon: '{ '
+    anon: ''
+    anon: '{'
+    anon: ' '
+      anon: ' '
+  anon: 'return '
+    anon: ''
+    anon: 'return'
+    anon: ' '
+      anon: ' '
+  Ident: 'a'
+    anon: 'a'
+      anon: 'a'
+      anon: ''
+  anon: ' + '
+    anon: ' '
+      anon: ' '
+    anon: '+'
+    anon: ' '
+      anon: ' '
+  Ident: 'b'
+    anon: 'b'
+      anon: 'b'
+      anon: ''
+  anon: '; '
+    anon: ''
+    anon: ';'
+    anon: ' '
+      anon: ' '
+  anon: '}'
+    anon: ''
+    anon: '}'
+    anon: ''
+<end of output>
+Test time =   0.37 sec
+----------------------------------------------------------
+Test Pass Reason:
+Required regular expression found. Regex=[Parse succeeded]
+"LexerSample" end time: Nov 30 08:07 SE Asia Standard Time
+"LexerSample" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 30 08:07 SE Asia Standard Time
