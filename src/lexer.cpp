@@ -2,51 +2,14 @@
 #include "lexer.hpp"
 
 #include <cctype>
-#include <unordered_map>
-
-namespace {
-    using Map = std::unordered_map<std::string, TokenType>;
-
-    Map make_keyword_map() {
-        return Map{
-            {"if", TokenType::If},
-            {"else", TokenType::Else},
-            {"for", TokenType::For},
-            {"while", TokenType::While},
-            {"return", TokenType::Return},
-            {"function", TokenType::Function},
-        };
-    }
-
-    const Map& keywords() {
-        static Map m = make_keyword_map();
-        return m;
-    }
-}
+#include <string_view>
 
 Lexer::Lexer(std::string source) noexcept
     : source_(std::move(source)), pos_(0), length_(source_.size()), line_(1), column_(1) {}
 
-char Lexer::currentChar() const noexcept {
-    return pos_ < length_ ? source_[pos_] : '\0';
-}
+// Removed: currentChar, peekChar, advance (now in header)
 
-char Lexer::peekChar(std::size_t ahead) const noexcept {
-    auto idx = pos_ + ahead;
-    return idx < length_ ? source_[idx] : '\0';
-}
-
-void Lexer::advance() noexcept {
-    if (pos_ < length_) {
-        if (source_[pos_] == '\n') {
-            ++line_;
-            column_ = 1;
-        } else {
-            ++column_;
-        }
-        ++pos_;
-    }
-}
+// Removed: keyword map and functions
 
 void Lexer::skipWhitespace() noexcept {
     for (;;) {
@@ -101,7 +64,7 @@ Token Lexer::readNumber() {
         while (std::isdigit(static_cast<unsigned char>(currentChar()))) advance();
     }
 
-    tok.value = source_.substr(start, pos_ - start);
+    tok.value = std::string_view(source_).substr(start, pos_ - start);
     tok.line = line_;
     tok.column = column_ - static_cast<std::uint32_t>(tok.value.size());
     return tok;
@@ -145,16 +108,17 @@ Token Lexer::readString() {
 
 Token Lexer::readIdentifier() {
     Token tok;
+    tok.type = TokenType::Identifier;  // Always Identifier, no keyword check
     tok.index = pos_;
     std::size_t start = pos_;
-    while (std::isalnum(static_cast<unsigned char>(currentChar())) || currentChar() == '_') advance();
-    tok.value = source_.substr(start, pos_ - start);
+    while (pos_ < length_) {
+        char c = source_[pos_];
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && (static_cast<unsigned char>(c) < 128)) break;  // Allow UTF-8 high bytes
+        advance();
+    }
+    tok.value = std::string_view(source_).substr(start, pos_ - start);
     tok.line = line_;
     tok.column = column_ - static_cast<std::uint32_t>(tok.value.size());
-
-    auto it = keywords().find(tok.value);
-    if (it != keywords().end()) tok.type = it->second;
-    else tok.type = TokenType::Identifier;
     return tok;
 }
 
@@ -168,7 +132,7 @@ Token Lexer::nextToken() {
     char c = currentChar();
     if (c == '\0') {
         tok.type = TokenType::EndOfFile;
-        tok.value.clear();
+        tok.value = std::string_view();
         return tok;
     }
 
@@ -178,8 +142,8 @@ Token Lexer::nextToken() {
     // Strings
     if (c == '"' || c == '\'') return readString();
 
-    // Identifiers / keywords
-    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') return readIdentifier();
+    // Identifiers
+    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_' || (static_cast<unsigned char>(c) >= 128)) return readIdentifier();  // UTF-8 start
 
     // Two-character operators
     switch (c) {
@@ -225,12 +189,13 @@ Token Lexer::nextToken() {
     // Unknown single char
     advance();
     tok.type = TokenType::Unknown;
-    tok.value = std::string(1, c);
+    tok.value = std::string_view(&c, 1);
     return tok;
 }
 
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> out;
+    out.reserve(100);  // Pre-allocate for speed
     for (;;) {
         Token t = nextToken();
         out.push_back(std::move(t));

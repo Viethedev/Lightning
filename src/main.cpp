@@ -15,7 +15,8 @@ else :
 print ( done )
 )";
 
-    Parser p;
-    p.parse(input);
+    Parser p(input);
+    std::unique_ptr<Program> prog = p.parse();
+    prog->print();
     return 0;
 }

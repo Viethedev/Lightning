@@ -12,7 +12,7 @@
 struct Program;
 
 // StatementParser function type: takes statement text, indent level, and returns ASTNode
-using StatementParser = std::function<std::unique_ptr<ASTNode>(const std::string& stmtText, int indentLevel, class IndentationParser& parser)>;
+using StatementParser = std::function<std::unique_ptr<ASTNode>(const std::string& stmtText, int indentLevel, class Parser& parser)>;
 
 // Definition table: map from keyword/pattern hash to parser
 extern std::unordered_map<std::string, StatementParser> statementDefinitions;
@@ -23,10 +23,10 @@ std::string computePatternId(const std::string& stmtText);
 // Register a statement definition
 void registerStatement(const std::string& keyword, StatementParser parser);
 
-// IndentationParser class
-class IndentationParser {
+// Parser class
+class Parser {
 public:
-    explicit IndentationParser(const std::string& source);
+    explicit Parser(const std::string& source);
 
     std::unique_ptr<Program> parse();
 
@@ -53,15 +53,7 @@ private:
 };
 
 // Specific parsers
-std::unique_ptr<ASTNode> parseIf(const std::string& stmtText, int indentLevel, IndentationParser& parser);
+std::unique_ptr<ASTNode> parseIf(const std::string& stmtText, int indentLevel, Parser& parser);
 
 // Initialize definitions
 void initDefinitions();
-
-// Parser class declaration
-class Parser {
-public:
-    void parse(const std::string& input);
-    void parseBlock(const std::string& input);
-    void parseStatement(const std::string& input);
-};

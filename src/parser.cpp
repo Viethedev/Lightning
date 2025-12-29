@@ -22,13 +22,14 @@ void registerStatement(const std::string& keyword, StatementParser parser) {
     statementDefinitions[keyword] = std::move(parser);
 }
 
-// IndentationParser class implementation
-IndentationParser::IndentationParser(const std::string& source) : source_(source) {}
+// Parser class implementation
+Parser::Parser(const std::string& source) : source_(source) {}
 
-std::unique_ptr<Program> IndentationParser::parse() {
+std::unique_ptr<Program> Parser::parse() {
     Lexer lexer(source_);
     tokens_ = lexer.tokenize();
     pos_ = 0;
+    initDefinitions();
 
     auto program = std::make_unique<Program>();
     parseBlock(program->root, 0);
@@ -36,7 +37,7 @@ std::unique_ptr<Program> IndentationParser::parse() {
 }
 
 // Parse a block at given indentation level
-void IndentationParser::parseBlock(Block& block, int indentLevel) {
+void Parser::parseBlock(Block& block, int indentLevel) {
     while (current()) {
         const Token* tok = current();
         if (tok->type == TokenType::EndOfFile) break;
@@ -49,7 +50,7 @@ void IndentationParser::parseBlock(Block& block, int indentLevel) {
             continue;
         }
 
-        auto stmt = parseStatement(indentLevel);
+        std::unique_ptr<ASTNode> stmt = parseStatement(indentLevel);
         if (stmt) {
             block.add(std::move(stmt));
         } else {
@@ -59,7 +60,7 @@ void IndentationParser::parseBlock(Block& block, int indentLevel) {
 }
 
 // Generalized parseStatement: look up in definition table
-std::unique_ptr<ASTNode> IndentationParser::parseStatement(int indentLevel) {
+std::unique_ptr<ASTNode> Parser::parseStatement(int indentLevel) {
     std::string stmtText;
     int startLine = current() ? current()->line : 0;
     while (current() && current()->line == startLine && current()->type != TokenType::EndOfFile) {
@@ -83,31 +84,31 @@ std::unique_ptr<ASTNode> IndentationParser::parseStatement(int indentLevel) {
 }
 
 // Helper to parse a sub-block
-std::unique_ptr<Block> IndentationParser::parseSubBlock(int indentLevel) {
+std::unique_ptr<Block> Parser::parseSubBlock(int indentLevel) {
     auto block = std::make_unique<Block>();
     parseBlock(*block, indentLevel);
     return block;
 }
 
 // Public accessors for parsers
-const Token* IndentationParser::getCurrent() const {
+const Token* Parser::getCurrent() const {
     return current();
 }
 
-void IndentationParser::advanceToken() {
+void Parser::advanceToken() {
     advance();
 }
 
-const Token* IndentationParser::current() const {
+const Token* Parser::current() const {
     return pos_ < tokens_.size() ? &tokens_[pos_] : nullptr;
 }
 
-void IndentationParser::advance() {
+void Parser::advance() {
     ++pos_;
 }
 
 // Specific parsers
-std::unique_ptr<ASTNode> parseIf(const std::string& stmtText, int indentLevel, IndentationParser& parser) {
+std::unique_ptr<ASTNode> parseIf(const std::string& stmtText, int indentLevel, Parser& parser) {
     // Assume format: "if condition :"
     size_t colonPos = stmtText.find(" :");
     if (colonPos == std::string::npos) return std::make_unique<Statement>(stmtText); // fallback
@@ -130,20 +131,4 @@ std::unique_ptr<ASTNode> parseIf(const std::string& stmtText, int indentLevel, I
 void initDefinitions() {
     registerStatement("if", parseIf);
     // Add more: registerStatement("for", parseFor);
-}
-
-// Parser class implementation
-void Parser::parse(const std::string& input) {
-    initDefinitions();
-    IndentationParser parser(input);
-    auto ast = parser.parse();
-    ast->print();
-}
-
-void Parser::parseBlock(const std::string& input) {
-    // Stub
-}
-
-void Parser::parseStatement(const std::string& input) {
-    // Stub
 }
