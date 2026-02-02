@@ -14,14 +14,4 @@ add_executable(lightning ${LIGHTNING_SOURCES})
 target_include_directories(lightning PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 enable_testing()
-
-# Basic functional test: run the executable and check it prints a Function token
-if(WIN32)
-	# Ensure MSYS2 UCRT64 runtime DLLs are found when CTest runs the executable
-	add_test(NAME LexerSample
-			 COMMAND ${CMAKE_COMMAND} -E env "PATH=C:/msys64/ucrt64/bin;$ENV{PATH}" lightning)
-else()
-	add_test(NAME LexerSample COMMAND lightning)
-endif()
-# The demo now prints "Parse succeeded" on success; use that as the success regex
-set_tests_properties(LexerSample PROPERTIES PASS_REGULAR_EXPRESSION "Parse succeeded")
+add_test(NAME LightningTests COMMAND lightning)

@@ -1,205 +1,64 @@
-// Implementation for the modernized Lexer
 #include "lexer.hpp"
 
-#include <cctype>
-#include <string_view>
+typedef unsigned char uchar;
 
-Lexer::Lexer(std::string source) noexcept
-    : source_(std::move(source)), pos_(0), length_(source_.size()), line_(1), column_(1) {}
+inline Token currentToken(const std::string &sourceCode, std::size_t &index, uint32_t &line, uint32_t &column) {
+    // Skip whitespace
+    uint8_t pureLF = true;
+    uchar c = currentChar(sourceCode, index);
+    while (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+        if (c == '\r') { pureLF = false; line++; column = 1; }
+        else if (c == '\n') {
+            line += pureLF;
+            column *= pureLF; // Reset column on LF
+            pureLF = true;
+        } 
+        else if (c == '\t') column += TAB_SIZE;
+        index++;
+        c = currentChar(sourceCode, index);
+    }
 
-// Removed: currentChar, peekChar, advance (now in header)
+    size_t startIndex = index;
+    uint32_t startLine = line;
+    uint32_t startColumn = column;
 
-// Removed: keyword map and functions
-
-void Lexer::skipWhitespace() noexcept {
-    for (;;) {
-        char c = currentChar();
-        if (c == '\0') return;
-        if (std::isspace(static_cast<unsigned char>(c))) {
-            advance();
-            continue;
-        }
-        if (c == '/') {
-            char p = peekChar();
-            if (p == '/' || p == '*') {
-                skipComment();
-                continue;
+    // Identify token type
+    if (isIdentifierStartChar(c)) {
+        for (uchar ch; !isIdentifierChar(ch); nextChar(sourceCode, index)) column++;
+        return Token{TokenType::Identifier, ustring_view(&sourceCode[startIndex], index - startIndex), startLine, startColumn, startIndex};
+    } 
+    else if (isDigit(c)) {
+        for (uchar ch; isDigit(ch); ch = nextChar(sourceCode, index)) column++;
+        if (currentChar(sourceCode, index) == '.') {
+            column++;
+            for (uchar ch; isDigit(ch); ch = nextChar(sourceCode, index)) column++;
+            if ((currentChar(sourceCode, index) | 0x20) == 'j') {
+                column++;
+                return Token{TokenType::Complex, ustring_view(&sourceCode[startIndex], index - startIndex), startLine, startColumn, startIndex};
             }
-        }
-        break;
-    }
-}
-
-void Lexer::skipComment() noexcept {
-    if (currentChar() == '/' && peekChar() == '/') {
-        // line comment
-        while (currentChar() != '\0' && currentChar() != '\n') advance();
-        if (currentChar() == '\n') advance();
-        return;
-    }
-    if (currentChar() == '/' && peekChar() == '*') {
-        // block comment
-        advance(); // /
-        advance(); // *
-        while (currentChar() != '\0') {
-            if (currentChar() == '*' && peekChar() == '/') {
-                advance(); // *
-                advance(); // /
-                break;
+            else if ((currentChar(sourceCode, index) | 0x20) == 'e') {
+                column++;
+                if (currentChar(sourceCode, index) == '+' || currentChar(sourceCode, index) == '-') {
+                    column++;
+                    for (uchar ch; isDigit(ch); ch = nextChar(sourceCode, index)) column++;
+                }
             }
-            advance();
+            return Token{TokenType::Float, ustring_view(&sourceCode[startIndex], index - startIndex), startLine, startColumn, startIndex};
+        
+        return Token{TokenType::Integer, ustring_view(&sourceCode[startIndex], index - startIndex), startLine, startColumn, startIndex};
         }
     }
-}
+    else if (isOperatorChar(c)) {
+        for (uchar ch; isOperatorChar(ch); ch = nextChar(sourceCode, index)) column++;
+        return Token{TokenType::Operator, ustring_view(&sourceCode[startIndex], index - startIndex), startLine, startColumn, startIndex};
+    } 
+    else if (isPunctuationChar(c)) return Token{TokenType::Punctuation, ustring_view(&sourceCode[startIndex], 1), startLine, startColumn, startIndex};
 
-Token Lexer::readNumber() {
-    Token tok;
-    tok.type = TokenType::Number;
-    tok.index = pos_;
-    std::size_t start = pos_;
-
-    while (std::isdigit(static_cast<unsigned char>(currentChar()))) advance();
-    if (currentChar() == '.' && std::isdigit(static_cast<unsigned char>(peekChar()))) {
-        advance(); // dot
-        while (std::isdigit(static_cast<unsigned char>(currentChar()))) advance();
+    else if (c > 127) {
+        // Handle UTF-8 characters (not fully implemented)
+        while (nextChar(sourceCode, index) > 127) column++;
+        return Token{TokenType::UnicodeUTF8, ustring_view(&sourceCode[startIndex], index - startIndex), startLine, startColumn, startIndex};
     }
 
-    tok.value = std::string_view(source_).substr(start, pos_ - start);
-    tok.line = line_;
-    tok.column = column_ - static_cast<std::uint32_t>(tok.value.size());
-    return tok;
-}
-
-Token Lexer::readString() {
-    Token tok;
-    tok.type = TokenType::String;
-    tok.index = pos_;
-    char quote = currentChar();
-    advance(); // skip opening quote
-    std::size_t start = pos_;
-    std::string out;
-
-    while (currentChar() != '\0' && currentChar() != quote) {
-        if (currentChar() == '\\') {
-            advance();
-            char esc = currentChar();
-            switch (esc) {
-                case 'n': out.push_back('\n'); break;
-                case 't': out.push_back('\t'); break;
-                case 'r': out.push_back('\r'); break;
-                case '\\': out.push_back('\\'); break;
-                case '\'': out.push_back('\''); break;
-                case '"': out.push_back('"'); break;
-                default: out.push_back(esc); break;
-            }
-            if (currentChar() != '\0') advance();
-            continue;
-        }
-        out.push_back(currentChar());
-        advance();
-    }
-    if (currentChar() == quote) advance(); // consume closing quote
-
-    tok.value = std::move(out);
-    tok.line = line_;
-    tok.column = column_ - static_cast<std::uint32_t>(tok.value.size()) - 1;
-    return tok;
-}
-
-Token Lexer::readIdentifier() {
-    Token tok;
-    tok.type = TokenType::Identifier;  // Always Identifier, no keyword check
-    tok.index = pos_;
-    std::size_t start = pos_;
-    while (pos_ < length_) {
-        char c = source_[pos_];
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && (static_cast<unsigned char>(c) < 128)) break;  // Allow UTF-8 high bytes
-        advance();
-    }
-    tok.value = std::string_view(source_).substr(start, pos_ - start);
-    tok.line = line_;
-    tok.column = column_ - static_cast<std::uint32_t>(tok.value.size());
-    return tok;
-}
-
-Token Lexer::nextToken() {
-    skipWhitespace();
-    Token tok;
-    tok.index = pos_;
-    tok.line = line_;
-    tok.column = column_;
-
-    char c = currentChar();
-    if (c == '\0') {
-        tok.type = TokenType::EndOfFile;
-        tok.value = std::string_view();
-        return tok;
-    }
-
-    // Numbers
-    if (std::isdigit(static_cast<unsigned char>(c))) return readNumber();
-
-    // Strings
-    if (c == '"' || c == '\'') return readString();
-
-    // Identifiers
-    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_' || (static_cast<unsigned char>(c) >= 128)) return readIdentifier();  // UTF-8 start
-
-    // Two-character operators
-    switch (c) {
-        case '=':
-            if (peekChar() == '=') { advance(); advance(); tok.type = TokenType::Equal; tok.value = "=="; return tok; }
-            advance(); tok.type = TokenType::Assign; tok.value = "="; return tok;
-        case '!':
-            if (peekChar() == '=') { advance(); advance(); tok.type = TokenType::NotEqual; tok.value = "!="; return tok; }
-            advance(); tok.type = TokenType::Not; tok.value = "!"; return tok;
-        case '<':
-            if (peekChar() == '=') { advance(); advance(); tok.type = TokenType::LessEqual; tok.value = "<="; return tok; }
-            advance(); tok.type = TokenType::Less; tok.value = "<"; return tok;
-        case '>':
-            if (peekChar() == '=') { advance(); advance(); tok.type = TokenType::GreaterEqual; tok.value = ">="; return tok; }
-            advance(); tok.type = TokenType::Greater; tok.value = ">"; return tok;
-        case '&':
-            if (peekChar() == '&') { advance(); advance(); tok.type = TokenType::And; tok.value = "&&"; return tok; }
-            break;
-        case '|':
-            if (peekChar() == '|') { advance(); advance(); tok.type = TokenType::Or; tok.value = "||"; return tok; }
-            break;
-    }
-
-    // Single-character tokens
-    switch (c) {
-        case '+': advance(); tok.type = TokenType::Plus; tok.value = "+"; return tok;
-        case '-': advance(); tok.type = TokenType::Minus; tok.value = "-"; return tok;
-        case '*': advance(); tok.type = TokenType::Star; tok.value = "*"; return tok;
-        case '/': advance(); tok.type = TokenType::Slash; tok.value = "/"; return tok;
-        case '%': advance(); tok.type = TokenType::Percent; tok.value = "%"; return tok;
-        case '(' : advance(); tok.type = TokenType::LParen; tok.value = "("; return tok;
-        case ')' : advance(); tok.type = TokenType::RParen; tok.value = ")"; return tok;
-        case '{' : advance(); tok.type = TokenType::LBrace; tok.value = "{"; return tok;
-        case '}' : advance(); tok.type = TokenType::RBrace; tok.value = "}"; return tok;
-        case '[' : advance(); tok.type = TokenType::LBracket; tok.value = "["; return tok;
-        case ']' : advance(); tok.type = TokenType::RBracket; tok.value = "]"; return tok;
-        case ';' : advance(); tok.type = TokenType::Semicolon; tok.value = ";"; return tok;
-        case ',' : advance(); tok.type = TokenType::Comma; tok.value = ","; return tok;
-        case '.' : advance(); tok.type = TokenType::Dot; tok.value = "."; return tok;
-        case ':' : advance(); tok.type = TokenType::Colon; tok.value = ":"; return tok;
-    }
-
-    // Unknown single char
-    advance();
-    tok.type = TokenType::Unknown;
-    tok.value = std::string_view(&c, 1);
-    return tok;
-}
-
-std::vector<Token> Lexer::tokenize() {
-    std::vector<Token> out;
-    out.reserve(100);  // Pre-allocate for speed
-    for (;;) {
-        Token t = nextToken();
-        out.push_back(std::move(t));
-        if (out.back().type == TokenType::EndOfFile) break;
-    }
-    return out;
+    return Token{TokenType::Unrecognized, ustring_view(&sourceCode[startIndex], 1), startLine, startColumn, startIndex};
 }

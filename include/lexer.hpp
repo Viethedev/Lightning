@@ -1,77 +1,83 @@
 #pragma once
-
-#include <string>
-#include <string_view>
-#include <vector>
+#include <cstddef>
 #include <cstdint>
+#include <string>
 
-enum class TokenType : std::uint8_t {
-    // Literals
-    Number, String, Identifier,
+typedef enum : uint8_t {
+    Unrecognized, UnicodeUTF8,
+    Identifier, Keyword,
+    Integer, Float, Complex, String,
+    Operator, Punctuation,
+    Indent, Dedent, Newline, EOFToken
+} TokenType;
 
-    // Keywords
-    If, Else, For, While, Return, Function,
+#define TAB_SIZE 4
 
-    // Operators
-    Plus, Minus, Star, Slash, Percent,
-    Assign,
-    Equal, NotEqual, Less, Greater, LessEqual, GreaterEqual,
-    And, Or, Not,
+inline unsigned char currentChar(const std::string& sourceCode, std::size_t index) { 
+    return static_cast<unsigned char>(sourceCode[index]); 
+};
 
-    // Delimiters
-    LParen, RParen, LBrace, RBrace, LBracket, RBracket,
-    Semicolon, Comma, Dot, Colon,
+inline unsigned char peekChar(const std::string& sourceCode, std::size_t index, std::size_t ahead = 1) { 
+    return static_cast<unsigned char>(sourceCode[index + ahead]); 
+};
 
-    // Special
-    EndOfFile, Unknown
+inline unsigned char nextChar(const std::string& sourceCode, std::size_t& index) { 
+    return static_cast<unsigned char>(sourceCode[index++]); 
+};
+
+inline bool isAlpha(unsigned char c) { 
+    unsigned char lowerC = c | 0x20;
+    return (lowerC >= 'a' && lowerC <= 'z');
+};
+
+inline bool isDigit(unsigned char c) { 
+    return c - '0' <= 9; 
+};
+
+inline bool isIdentifierChar(unsigned char c) { 
+    return isAlpha(c) || isDigit(c) || c == '_'; 
+};
+
+inline bool isOperatorChar(unsigned char c) { 
+    switch (c) {
+        case '+': case '-': case '*': case '/': case '%':
+        case '=': case '!': case '<': case '>': case '?':
+        case '&': case '|': case '^': case '~':
+            return true;
+        default:
+            return false;
+    }
+};
+
+inline bool isPunctuationChar(unsigned char c) { 
+    switch (c) {
+        case '(': case ')': case '{': case '}':
+        case '[': case ']': case ',': case ';': case ':':
+            return true;
+        default:
+            return false;
+    }
+};
+
+struct ustring_view {
+    const char* data;
+    uint32_t size;
+    ustring_view(const char* d, std::size_t s) : data(d), size(s) {}
 };
 
 struct Token {
-    TokenType type = TokenType::Unknown;
-    std::string_view value;  // Zero-copy, UTF-8 friendly
-    std::size_t index = 0;
-    std::uint32_t line = 1;
-    std::uint32_t column = 1;
+    TokenType type;
+    ustring_view lexeme;
+    uint32_t line;
+    uint32_t column;
+    size_t index;
 };
 
-class Lexer {
-public:
-    explicit Lexer(std::string source) noexcept;
+inline bool isIdentifierStartChar(unsigned char c) {
+    return isAlpha(c) || c == '_';
+}
 
-    std::vector<Token> tokenize();
-    Token nextToken();
+// Special ASCIIs: '\0': 0, '@': 64, '#': 35, '$': 36
+// Undefined ASCIIs: 0-31, 96, 127 except for '\n': 13, '\r': 10, '\t': 9
 
-private:
-    std::string source_;  // UTF-8 string
-    std::size_t pos_ = 0;
-    std::size_t length_ = 0;
-    std::uint32_t line_ = 1;
-    std::uint32_t column_ = 1;
-
-    // Inline for speed
-    inline char currentChar() const noexcept {
-        return pos_ < length_ ? source_[pos_] : '\0';
-    }
-    inline char peekChar(std::size_t ahead = 1) const noexcept {
-        auto idx = pos_ + ahead;
-        return idx < length_ ? source_[idx] : '\0';
-    }
-    inline void advance() noexcept {
-        if (pos_ < length_) {
-            if (source_[pos_] == '\n') {
-                ++line_;
-                column_ = 1;
-            } else {
-                ++column_;
-            }
-            ++pos_;
-        }
-    }
-
-    void skipWhitespace() noexcept;
-    void skipComment() noexcept;
-
-    Token readNumber();
-    Token readString();
-    Token readIdentifier();
-};
+inline Token currentToken(const std::string& sourceCode, std::size_t& index, uint32_t& line, uint32_t& column);
