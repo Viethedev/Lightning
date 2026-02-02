@@ -1,3 +1,4 @@
+/* DECAPRATED CODEBASE
 #pragma once
 #include <cstddef>
 #include <cstdint>
@@ -83,5 +84,5 @@ class Frontend {
     ASTNode peekNextNode();
     void advanceToNextNode();
 };
-
+*/
 
