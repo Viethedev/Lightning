@@ -1,83 +1,120 @@
 #pragma once
-#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
-typedef enum : uint8_t {
-    Unrecognized, UnicodeUTF8,
-    Identifier, Keyword,
-    Integer, Float, Complex, String,
-    Operator, Punctuation,
-    Indent, Dedent, Newline, EOFToken
-} TokenType;
+typedef unsigned char uchar_t;
 
-#define TAB_SIZE 4
+typedef uint32_t symbol_t;
 
-inline unsigned char currentChar(const std::string& sourceCode, std::size_t index) { 
-    return static_cast<unsigned char>(sourceCode[index]); 
+enum CharClass : uint8_t {
+    CC_UNKNOWN    = 0,
+    CC_NEWLINE    = 2,
+    CC_PUNCT      = 32,
+    CC_OPERATOR   = 64,
+    CC_DIGIT      = 128,
+    CC_IDENT_CONT = 128,
+    CC_IDENT_START = 129,
+    CC_ALPHA      = 129,
+    CC_UNDERSCORE = 129,
 };
 
-inline unsigned char peekChar(const std::string& sourceCode, std::size_t index, std::size_t ahead = 1) { 
-    return static_cast<unsigned char>(sourceCode[index + ahead]); 
+enum TokenType : uint16_t {
+    TT_UNKNOWN, TT_ERROR,
+    TT_IDENT,
+    TT_NUMBER, TT_STRING,
+
+    TT_LPAREN = 32, TT_RPAREN, 
+    TT_COMMA, TT_COLON, TT_SEMICOLON,
+    TT_LBRACE, TT_RBRACE, 
+    TT_LBRACKET, TT_RBRACKET, 
+
+    TT_CUSTOM_OP = 64,
+
+    // Single op
+    TT_EXCL = 65,
+    TT_PERCENT,
+    TT_AMPERSAND,
+    TT_STAR,
+    TT_PLUS,
+    TT_MINUS,
+    TT_SLASH,
+    TT_LT,  
+    TT_EQUAL,    
+    TT_GT,
+    TT_AT,
+    TT_CARET, 
+    TT_PIPE = 77, 
+    TT_TILDE = 78,
+    TT_QUOT,
+    TT_QUESTION,
+    TT_DOT,
+
+    TT_AND = 82, 
+    TT_OR = 83,
+
+    // Double op (single + 19)
+    TT_NEQ = 84, 
+    TT_IMOD,
+    TT_IAND, 
+    TT_IMUL, 
+    TT_IADD, 
+    TT_ISUB, 
+    TT_IDIV, 
+    TT_LE, 
+    TT_EQ,
+    TT_GE, 
+    TT_IAT,
+    TT_IXOR,
+    TT_IOR = 96, 
+    
+    TT_LSHIFT, TT_RSHIFT, TT_LARROW, TT_RARROW,
+
+    TT_INDENT, TT_DEDENT, TT_NEWLINE, TT_EOF
 };
 
-inline unsigned char nextChar(const std::string& sourceCode, std::size_t& index) { 
-    return static_cast<unsigned char>(sourceCode[index++]); 
-};
-
-inline bool isAlpha(unsigned char c) { 
-    unsigned char lowerC = c | 0x20;
-    return (lowerC >= 'a' && lowerC <= 'z');
-};
-
-inline bool isDigit(unsigned char c) { 
-    return c - '0' <= 9; 
-};
-
-inline bool isIdentifierChar(unsigned char c) { 
-    return isAlpha(c) || isDigit(c) || c == '_'; 
-};
-
-inline bool isOperatorChar(unsigned char c) { 
-    switch (c) {
-        case '+': case '-': case '*': case '/': case '%':
-        case '=': case '!': case '<': case '>': case '?':
-        case '&': case '|': case '^': case '~':
-            return true;
-        default:
-            return false;
-    }
-};
-
-inline bool isPunctuationChar(unsigned char c) { 
-    switch (c) {
-        case '(': case ')': case '{': case '}':
-        case '[': case ']': case ',': case ';': case ':':
-            return true;
-        default:
-            return false;
-    }
-};
-
-struct ustring_view {
-    const char* data;
-    uint32_t size;
-    ustring_view(const char* d, std::size_t s) : data(d), size(s) {}
+enum Format : uint16_t {
+    F_NONE,
+    F_INT, F_FLOAT, F_COMPLEX,
 };
 
 struct Token {
+    symbol_t lexeme;
+    uint32_t offset;
+    uint32_t length;
     TokenType type;
-    ustring_view lexeme;
-    uint32_t line;
-    uint32_t column;
-    size_t index;
-};
+    Format format = F_NONE;
+}; // 16 bytes
 
-inline bool isIdentifierStartChar(unsigned char c) {
-    return isAlpha(c) || c == '_';
-}
+struct Entry {
+    uint64_t hash = 0;  // 0 = empty
+    uint32_t offset;
+    uint32_t length;
+}; // 16 bytes
 
-// Special ASCIIs: '\0': 0, '@': 64, '#': 35, '$': 36
-// Undefined ASCIIs: 0-31, 96, 127 except for '\n': 13, '\r': 10, '\t': 9
+class Lexer {
+public:
+    Lexer(std::string src);
+    std::vector<Token> tokenize();
+    std::vector<char> pool;
+private:
+    // Source memory
+    std::string source;
+    const char* begin;
+    const char* current;
+    const char* end;
 
-inline Token currentToken(const std::string& sourceCode, std::size_t& index, uint32_t& line, uint32_t& column);
+    // Indentation memory
+    std::vector<uint16_t> indentStack;
+    bool atLineStart = true;
+
+    // Intern table memory and logic
+    std::vector<Entry> table;
+    uint32_t capacity;  // Power of two required
+    uint32_t size = 0;
+    uint32_t threshold;
+
+    symbol_t intern(const char* string, uint32_t length);
+    void grow();
+    void insert(Entry entry);
+}; // 128 bytes
