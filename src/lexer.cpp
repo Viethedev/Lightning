@@ -346,7 +346,7 @@ std::vector<Token> Lexer::tokenize() {
         }
     }
     // Handle EOF
-    uint32_t offset = source.size();
+    uint32_t offset = static_cast<uint32_t>(current - begin);
     while (indentStack.size() > 0) {
         indentStack.pop_back();
         tokens.push_back(Token {0, offset, 0, TT_DEDENT});
